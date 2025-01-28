@@ -278,6 +278,11 @@ function Selection:create_editing_input()
             { name = "avante_mentions" },
           },
         })
+        cmp.config.sources({
+          { name = "lazydev" },
+          { name = "nvim_lsp" },
+          { name = "path" },
+        })
       end
     end,
   })
