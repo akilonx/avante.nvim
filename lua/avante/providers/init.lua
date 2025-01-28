@@ -11,6 +11,7 @@ local DressingConfig = {
 local DressingState = { winid = nil, input_winid = nil, input_bufnr = nil }
 
 ---@class avante.Providers
+---@field o1 AvanteProviderFunctor
 ---@field openai AvanteProviderFunctor
 ---@field claude AvanteProviderFunctor
 ---@field copilot AvanteProviderFunctor
@@ -233,7 +234,7 @@ function M.refresh(provider_name)
   ---@type AvanteProviderFunctor | AvanteBedrockProviderFunctor
   local p = M[Config.provider]
   E.setup({ provider = p, refresh = true })
-  Utils.info("Switch to provider: " .. provider_name, { once = true, title = "Avante" })
+  -- Utils.info("Switch to provider: " .. provider, { once = true, title = "Avante" })
 end
 
 ---@param opts AvanteProvider | AvanteSupportedProvider | AvanteProviderFunctor | AvanteBedrockProviderFunctor

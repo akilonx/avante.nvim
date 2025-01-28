@@ -191,6 +191,14 @@ M._defaults = {
     },
   },
   ---@type AvanteSupportedProvider
+  o1 = {
+    endpoint = "https://api.openai.com/v1",
+    model = "o1-preview",
+    timeout = 30000, -- Timeout in milliseconds
+    temperature = 0,
+    max_tokens = 4096,
+  },
+  ---@type AvanteSupportedProvider
   openai = {
     endpoint = "https://api.openai.com/v1",
     model = "gpt-4o",
@@ -198,6 +206,14 @@ M._defaults = {
     temperature = 0,
     max_tokens = 16384, -- Increase this to include reasoning tokens (for reasoning models)
     reasoning_effort = "medium", -- low|medium|high, only used for reasoning models
+  },
+  ---@type AvanteSupportedProvider
+  deepseek = {
+    ndpoint = "https://api.deepseek.com/v1",
+    model = "deepseek-chat",
+    timeout = 30000, -- Timeout in milliseconds
+    temperature = 0,
+    max_tokens = 4096,
   },
   ---@type AvanteSupportedProvider
   copilot = {

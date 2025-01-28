@@ -100,9 +100,9 @@ function PromptInput:open()
 
   local win_opts = vim.tbl_extend("force", {
     relative = "cursor",
-    width = 40,
-    height = 2,
-    row = 1,
+    width = 80,
+    height = 5,
+    row = 5,
     col = 0,
     style = "minimal",
     border = Config.windows.edit.border,

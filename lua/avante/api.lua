@@ -197,7 +197,29 @@ function M.refresh(opts)
 end
 
 ---@param opts? AskOptions
-function M.focus(opts)
+M.focus_input = function(opts)
+  opts = opts or {}
+  local sidebar = require("avante").get()
+  if not sidebar then return end
+
+  if not sidebar:is_open() then sidebar:open(opts) end
+
+  if sidebar.input_container.winid then vim.api.nvim_set_current_win(sidebar.input_container.winid) end
+end
+
+---@param opts? AskOptions
+M.focus_results = function(opts)
+  opts = opts or {}
+  local sidebar = require("avante").get()
+  if not sidebar then return end
+
+  if not sidebar:is_open() then sidebar:open(opts) end
+
+  if sidebar.result_container.winid then vim.api.nvim_set_current_win(sidebar.result_container.winid) end
+end
+
+---@param opts? AskOptions
+M.focus = function(opts)
   opts = opts or {}
   local sidebar = require("avante").get()
   if not sidebar then return end

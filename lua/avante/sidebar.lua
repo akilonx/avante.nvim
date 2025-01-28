@@ -532,6 +532,8 @@ local spinner_chars = {
   "⣀",
 }
 local spinner_index = 1
+local token_start_time = nil
+local total_tokens_generated = 0
 
 local function get_searching_hint()
   spinner_index = (spinner_index % #spinner_chars) + 1
@@ -1454,13 +1456,32 @@ local buf_options = {
   buftype = "nofile",
 }
 
+-- local base_win_options = {
+--   winfixbuf = true,
+--   spell = false,
+--   signcolumn = "no",
+--   foldcolumn = "0",
+--   number = true,
+--   relativenumber = true,
+--   winfixwidth = true,
+--   list = false,
+--   winhl = "",
+--   linebreak = true,
+--   breakindent = true,
+--   wrap = false,
+--   cursorline = false,
+--   fillchars = "eob: ",
+--   winhighlight = "CursorLine:Normal,CursorColumn:Normal",
+--   winbar = "",
+--   statusline = "",
+-- }
 local base_win_options = {
   winfixbuf = true,
   spell = false,
   signcolumn = "no",
   foldcolumn = "0",
-  number = false,
-  relativenumber = false,
+  number = true,
+  relativenumber = true,
   winfixwidth = true,
   list = false,
   linebreak = true,
@@ -2154,7 +2175,15 @@ local function get_timestamp() return os.date("%Y-%m-%d %H:%M:%S") end
 ---@param selected_filepaths string[]
 ---@param selected_code AvanteSelectedCode?
 ---@return string
-local function render_chat_record_prefix(timestamp, provider, model, request, selected_filepaths, selected_code)
+local function render_chat_record_prefix(
+  timestamp,
+  provider,
+  model,
+  request,
+  selected_filepaths,
+  selected_code,
+  tokens_per_second
+)
   provider = provider or "unknown"
   model = model or "unknown"
   local res = "- Datetime: " .. timestamp .. "\n\n" .. "- Model: " .. provider .. "/" .. model
@@ -2175,6 +2204,7 @@ local function render_chat_record_prefix(timestamp, provider, model, request, se
       .. "\n```"
   end
 
+  if tokens_per_second then res = res .. string.format("\n\nTokens per second: %.2f", tokens_per_second) end
   return res .. "\n\n> " .. request:gsub("\n", "\n> "):gsub("([%w-_]+)%b[]", "`%0`") .. "\n\n"
 end
 
@@ -2221,7 +2251,8 @@ function Sidebar.render_history_content(history)
       entry.model,
       entry.request or "",
       selected_filepaths or {},
-      entry.selected_code
+      entry.selected_code,
+      entry.tokens_per_second
     )
     content = content .. prefix
     content = content .. entry.response .. "\n\n"
@@ -2655,10 +2686,14 @@ function Sidebar:create_input_container(opts)
     local waiting_for_breakline = false
     local transformed_response = ""
     local displayed_response = ""
+
+    local last_tokens_per_second = nil
     local current_path = ""
 
     local is_first_chunk = true
     local scroll = true
+    token_start_time = vim.loop.hrtime() / 1e9 -- Record the start time in seconds
+    total_tokens_generated = 0 -- Reset the token counter
 
     ---stop scroll when user presses j/k keys
     local function on_j()
@@ -2688,6 +2723,7 @@ function Sidebar:create_input_container(opts)
 
     ---@type AvanteLLMChunkCallback
     local function on_chunk(chunk)
+
       self.is_generating = true
 
       local remove_line = [[\033[1A\033[K]]
@@ -2707,6 +2743,8 @@ function Sidebar:create_input_container(opts)
       else
         original_response = original_response .. chunk
       end
+      original_response = original_response .. chunk
+      total_tokens_generated = total_tokens_generated + #vim.split(chunk, "%s+") -- Count tokens in the chunk
 
       local selected_files = self.file_selector:get_selected_files_contents()
 
@@ -2730,7 +2768,11 @@ function Sidebar:create_input_container(opts)
         displayed_response = cur_displayed_response
         return
       end
-      local suffix = get_display_content_suffix(transformed)
+      local elapsed_time = vim.loop.hrtime() / 1e9 - token_start_time -- Calculate elapsed time in seconds
+      local tokens_per_second = total_tokens_generated / math.max(elapsed_time, 1) -- Avoid division by zero
+      last_tokens_per_second = tokens_per_second -- Store the last TPS value
+      local suffix = string.format("\n\nTokens per second: %.2f", tokens_per_second)
+        .. get_display_content_suffix(transformed)
       self:update_content(content_prefix .. cur_displayed_response .. suffix, { scroll = scroll })
       vim.schedule(function() vim.cmd("redraw") end)
       displayed_response = cur_displayed_response
@@ -2766,6 +2808,11 @@ function Sidebar:create_input_container(opts)
         return
       end
 
+      -- Append the last TPS to the displayed_response
+      if last_tokens_per_second then
+        displayed_response = displayed_response .. string.format("\n\nTokens per second: %.2f", last_tokens_per_second)
+      end
+
       self:update_content(
         content_prefix
           .. displayed_response
@@ -2797,6 +2844,7 @@ function Sidebar:create_input_container(opts)
         request = request,
         response = displayed_response,
         original_response = original_response,
+        tokens_per_second = last_tokens_per_second,
         selected_filepaths = selected_filepaths,
         selected_code = selected_code,
         tool_histories = stop_opts.tool_histories,
@@ -2976,12 +3024,18 @@ function Sidebar:create_input_container(opts)
         )
 
         cmp.setup.buffer({
-          enabled = true,
+          enabled = false,
           sources = {
             { name = "avante_commands" },
             { name = "avante_mentions" },
             { name = "avante_files" },
           },
+        })
+
+        cmp.config.sources({
+          { name = "lazydev" },
+          { name = "nvim_lsp" },
+          { name = "path" },
         })
       end
     end,
