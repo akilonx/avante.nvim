@@ -107,6 +107,19 @@ cmd(
 )
 cmd("Refresh", function() require("avante.api").refresh() end, { desc = "avante: refresh windows" })
 cmd("Focus", function() require("avante.api").focus() end, { desc = "avante: switch focus windows" })
+cmd(
+  "SwitchCursorApplyingProvider",
+  function(opts) require("avante.api").switch_cursor_applying_provider(vim.trim(opts.args or "")) end,
+  {
+    nargs = 1,
+    desc = "avante: switch cursor applying provider",
+    complete = function(_, line, _)
+      local prefix = line:match("AvanteSwitchCursorApplyingProvider%s*(.*)$") or ""
+      ---@param key string
+      return vim.tbl_filter(function(key) return key:find(prefix, 1, true) == 1 end, Config.provider_names)
+    end,
+  }
+)
 cmd("SwitchProvider", function(opts) require("avante.api").switch_provider(vim.trim(opts.args or "")) end, {
   nargs = 1,
   desc = "avante: switch provider",
