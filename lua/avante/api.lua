@@ -1,4 +1,5 @@
 local Config = require("avante.config")
+local Provider = require("avante.providers")
 local Utils = require("avante.utils")
 local PromptInput = require("avante.ui.prompt_input")
 
@@ -32,6 +33,24 @@ local function to_windows_path(path)
   winpath = winpath:gsub("\\$", "")
 
   return winpath
+end
+
+---@param provider_name avante.ProviderName
+function M.switch_cursor_applying_provider(provider_name)
+  if not Config.has_provider(provider_name) then
+    Utils.error("Provider not found: " .. provider_name)
+    return
+  end
+  -- Update the config
+  require("avante.config").override({ cursor_applying_provider = provider_name })
+  -- Re-run setup for the new provider if needed (similar to Provider.refresh but for cursor_applying_provider)
+  local p = Provider[provider_name]
+  if p then
+    Provider.env.setup({ provider = p, refresh = true })
+    Utils.info("Switched cursor applying provider to: " .. provider_name, { title = "Avante" })
+  else
+    Utils.error("Failed to get provider instance for: " .. provider_name)
+  end
 end
 
 ---@param opts? {source: boolean}
